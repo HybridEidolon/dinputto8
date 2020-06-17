@@ -130,9 +130,26 @@ HRESULT m_IDirectInputDeviceX::GetDeviceData(DWORD cbObjectData, LPDIDEVICEOBJEC
 
 	HRESULT hr = ProxyInterface->GetDeviceData(sizeof(DIDEVICEOBJECTDATA), (rgdod) ? &pdod[0] : nullptr, pdwInOut, dwFlags);
 
+	
+
 	// Copy array
 	if (SUCCEEDED(hr) && rgdod && pdwInOut && cbObjectData)
 	{
+		// focus hack -- check foreground window's process and don't copy device data if process is not active
+		HWND hfgwnd = GetForegroundWindow();
+		DWORD fgwndprocid = 0;
+		DWORD process = GetCurrentProcessId();
+		if (hfgwnd != NULL)
+		{
+			GetWindowThreadProcessId(hfgwnd, &fgwndprocid);
+		}
+
+		if (process != fgwndprocid)
+		{
+			// foreground window belongs to another process; don't copy the device data
+			*pdwInOut = 0;
+		}
+
 		for (UINT x = 0; x < *pdwInOut; x++)
 		{
 			CopyMemory((void*)((DWORD)rgdod + (cbObjectData * x)), &pdod[x], cbObjectData);
